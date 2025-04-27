@@ -1,57 +1,51 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('./database'); // Importa a conexão que criamos
+const sequelize = require('./database');
 
-// Modelo para Clientes
+// Definição do modelo Cliente
 const Cliente = sequelize.define('Cliente', {
   nome: {
     type: DataTypes.STRING,
     allowNull: false
   },
-  numero: {
+  telefone: {
     type: DataTypes.STRING,
-    allowNull: false,
-    unique: true // Garante que cada número só aparece uma vez
+    allowNull: true
   }
-}, {
-  timestamps: true // Cria campos createdAt e updatedAt automaticamente
 });
 
-// Modelo para Pedidos
+// Definição do modelo Pedido
 const Pedido = sequelize.define('Pedido', {
   bolo: {
     type: DataTypes.STRING,
     allowNull: false
   },
   dataRetirada: {
-    type: DataTypes.STRING,
-    allowNull: false
+    type: DataTypes.DATE,
+    allowNull: true
   },
   status: {
     type: DataTypes.STRING,
-    defaultValue: 'pendente', // Valor padrão
-    allowNull: false
+    defaultValue: 'recebido'
   },
   mensagemOriginal: {
     type: DataTypes.TEXT,
-    allowNull: false
+    allowNull: true
   }
-}, {
-  timestamps: true
 });
 
-// Relacionamentos (um Cliente pode ter muitos Pedidos)
+// Relacionamentos
 Cliente.hasMany(Pedido);
 Pedido.belongsTo(Cliente);
 
-// Sincroniza os modelos com o banco de dados
+// Sincronizar o banco de dados
 (async () => {
   try {
-    await sequelize.sync({ alter: true }); // 'alter' atualiza a estrutura se necessário
+    await sequelize.sync({ alter: true });
     console.log('✅ Modelos sincronizados com o banco de dados');
   } catch (error) {
     console.error('❌ Erro ao sincronizar modelos:', error);
   }
 })();
 
-// Exporta os modelos para usar em outros arquivos
+// Exportar os modelos
 module.exports = { Cliente, Pedido };

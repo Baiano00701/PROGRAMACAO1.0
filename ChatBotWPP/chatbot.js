@@ -31,7 +31,60 @@ function extrairData(texto) {
     return match ? match[2] : 'hoje às 18h';
 }
 
-// Funil de mensagens
+function detectarIntencao(texto) {
+    // Padrões para confirmação
+    const padroesConfirmacao = [
+        /^(sim|confirm[oa]?|pode anotar|quero|aceito|ok|okay|t[áa] certo)$/i,
+        /^(claro|com certeza|vou querer|fa[çc]a o pedido)$/i,
+        /^\uD83D\uDC4D|\uD83D\uDC4C/ // Emojis de 👍 e 👌
+    ];
+
+    // Padrões para cancelamento
+    const padroesCancelamento = [
+        /^(n[ãa]o|nope|cancel[ea]|desist[io]|n[ãa] quero)$/i,
+        /^(esquece|deixa pra l[áa]|volto depois)$/i,
+        /^\uD83D\uDC4E|\u274C/ // Emojis de 👎 e ❌
+    ];
+
+    // Verifica confirmação
+    if (padroesConfirmacao.some(regex => regex.test(texto.trim()))) {
+        return 'confirmar';
+    }
+
+    // Verifica cancelamento
+    if (padroesCancelamento.some(regex => regex.test(texto.trim()))) {
+        return 'cancelar';
+    }
+
+    return null;
+}
+
+async function consultarStatusCliente(numeroCliente) {
+    const cliente = await Cliente.findOne({ 
+        where: { numero: numeroCliente },
+        include: [Pedido],
+        order: [[Pedido, 'createdAt', 'DESC']]
+    });
+
+    if (!cliente || cliente.Pedidos.length === 0) {
+        return null;
+    }
+
+    return cliente.Pedidos;
+}
+
+function formatarStatus(status) {
+    const statusMap = {
+        'recebido': '🟡 Em preparação',
+        'preparando': '🟠 Sendo preparado',
+        'pronto': '🟢 Pronto para retirada',
+        'entregue': '✅ Concluído',
+        'cancelado': '❌ Cancelado'
+    };
+    return statusMap[status.toLowerCase()] || status;
+}
+
+// Funil de mensagens (único handler)
 client.on('message', async msg => {
     try {
         // Menu principal
@@ -148,57 +201,100 @@ client.on('message', async msg => {
                 '🔹*CONFIRMAR PEDIDO*🔹\n\n' +
                 `🍰 Bolo: ${bolo}\n` +
                 `⏰ Quando: ${data}\n\n` +
-                'Digite *CONFIRMAR* para finalizar ou *CANCELAR* para alterar'
+                'Responda "sim" para confirmar ou "não" para cancelar'
             );
         }
 
-        // Confirmação de pedido
-        if (msg.body === 'CONFIRMAR|Confirmar|Confirma|SIM|sim|Sim' && pedidosPendentes[msg.from]) {
+        // Consulta de Status Inteligente
+        const padroesConsulta = [
+            /^(status|estado|situa[çc][aã]o)/i,
+            /^(meus pedidos|hist[óo]rico)/i,
+            /^(onde est[áa]|como est[áa]|ver meu)/i,
+            /pedido|encomenda/i
+        ];
+
+        const ehConsultaStatus = padroesConsulta.some(regex => regex.test(msg.body)) && 
+                               !msg.body.match(/confirmar|cancelar|quero/i);
+
+        if (ehConsultaStatus && msg.from.endsWith('@c.us')) {
+            const pedidos = await consultarStatusCliente(msg.from);
+
+            if (!pedidos || pedidos.length === 0) {
+                await client.sendMessage(msg.from,
+                    '📭 *Você não tem pedidos registrados.*\n\n' +
+                    'Para fazer um novo pedido, digite "menu" ou comece com:\n' +
+                    '"Quero [nome do bolo] para [data/horário]"'
+                );
+                return;
+            }
+
+            let resposta = '📋 *SEUS ÚLTIMOS PEDIDOS*\n\n';
+            
+            pedidos.slice(0, 3).forEach(p => {
+                resposta += `🔹 *Pedido #${p.id}*\n`;
+                resposta += `🍰 ${p.bolo}\n`;
+                resposta += `⏰ Retirada: ${p.dataRetirada}\n`;
+                resposta += `📅 Data do pedido: ${p.createdAt.toLocaleDateString()}\n`;
+                resposta += `🔄 Status: ${formatarStatus(p.status)}\n\n`;
+            });
+
+            if (pedidos.length > 3) {
+                resposta += `ℹ️ Você tem ${pedidos.length - 3} pedidos mais antigos.`;
+            }
+
+            await client.sendMessage(msg.from, resposta);
+        }
+
+        // Detecção de intenção para confirmação/cancelamento
+        const intencao = detectarIntencao(msg.body);
+        const temPedidoPendente = pedidosPendentes[msg.from];
+
+        if (intencao === 'confirmar' && temPedidoPendente) {
             const pedidoTemp = pedidosPendentes[msg.from];
             const contact = await msg.getContact();
-            const nomeCliente = contact.pushname || 'Não informado';
-            const numeroCliente = msg.from;
-
+            
             try {
-                // 1. Salva ou atualiza o cliente no banco de dados
                 const [cliente] = await Cliente.findOrCreate({
-                    where: { numero: numeroCliente },
-                    defaults: { nome: nomeCliente }
+                    where: { numero: msg.from },
+                    defaults: { nome: contact.pushname || 'Não informado' }
                 });
 
-                // 2. Cria o pedido associado ao cliente
                 const pedido = await Pedido.create({
                     bolo: pedidoTemp.bolo,
                     dataRetirada: pedidoTemp.data,
-                    status: 'recebido', // Status inicial
+                    status: 'recebido',
                     mensagemOriginal: msg.body,
                     ClienteId: cliente.id
                 });
 
-                // 3. Mensagem de confirmação para o cliente
                 await client.sendMessage(msg.from,
-                    `✅ *PEDIDO REGISTRADO!* ✅\n\n` +
-                    `📋 Número do Pedido: #${pedido.id}\n` +
-                    `🍰 Bolo: ${pedido.bolo}\n` +
-                    `⏰ Data de Retirada: ${pedido.dataRetirada}\n\n` +
-                    `Anotamos seu pedido! Você pode verificar o status a qualquer momento enviando "STATUS".`
+                    `✅ *Pedido #${pedido.id} registrado!*\n\n` +
+                    `🍰 ${pedido.bolo}\n` +
+                    `⏰ Retirada: ${pedido.dataRetirada}\n\n` +
+                    `Obrigado! Você pode verificar o status a qualquer momento enviando:\n` +
+                    `"Meus pedidos" ou "Status do pedido"`
                 );
 
-                // 4. Remove dos pedidos pendentes
                 delete pedidosPendentes[msg.from];
-
             } catch (error) {
                 console.error('Erro ao salvar pedido:', error);
                 await client.sendMessage(msg.from,
-                    '❌ Houve um problema ao registrar seu pedido. Por favor, tente novamente.'
+                    '❌ Houve um problema ao registrar seu pedido. Por favor, tente novamente mais tarde.'
                 );
             }
+        }
+        else if (intencao === 'cancelar' && temPedidoPendente) {
+            delete pedidosPendentes[msg.from];
+            await client.sendMessage(msg.from,
+                '🔄 *Pedido cancelado com sucesso!*\n\n' +
+                'Se mudar de ideia, é só começar de novo enviando "menu".'
+            );
         }
 
     } catch (error) {
         console.error('Erro ao processar mensagem:', error);
         await client.sendMessage(msg.from, 
-            'Ops! Ocorreu um erro. Por favor, tente novamente ou fale diretamente com José.'
+            '⚠️ Ocorreu um erro inesperado. Já estamos verificando!'
         );
     }
 });

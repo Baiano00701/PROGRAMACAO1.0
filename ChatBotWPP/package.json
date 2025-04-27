@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "express-handlebars": "^8.0.3",
     "moment-timezone": "^0.5.45",
@@ -7,5 +8,10 @@
     "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7",
     "whatsapp-web.js": ""
+  },
+  "devDependencies": {
+    "@eslint/config-helpers": "^0.2.1",
+    "eslint": "^9.25.1",
+    "node": "^22.15.0"
   }
 }
