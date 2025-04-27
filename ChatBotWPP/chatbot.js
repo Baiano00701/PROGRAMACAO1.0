@@ -1,130 +1,204 @@
-// leitor de qr code
+// Ativar QRCODE node chatbot.js
+const { Cliente, Pedido } = require('./models');
 const qrcode = require('qrcode-terminal');
-const { Client, Buttons, List, MessageMedia } = require('whatsapp-web.js'); // Mudança Buttons
+const { Client, MessageMedia } = require('whatsapp-web.js');
 const client = new Client();
+
+// Objeto para armazenar pedidos temporários
+const pedidosPendentes = {};
+
 // serviço de leitura do qr code
 client.on('qr', qr => {
-    qrcode.generate(qr, {small: true});
+    qrcode.generate(qr, { small: true });
 });
-// apos isso ele diz que foi tudo certo
+
 client.on('ready', () => {
     console.log('Tudo certo! WhatsApp conectado.');
 });
-// E inicializa tudo 
+
 client.initialize();
 
-const delay = ms => new Promise(res => setTimeout(res, ms)); // Função que usamos para criar o delay entre uma ação e outra
+const delay = ms => new Promise(res => setTimeout(res, ms));
 
-// Funil
+// Funções auxiliares
+function extrairNomeBolo(texto) {
+    const match = texto.match(/quero (.+?) (para|pras|pro|na|dia|hoje)/i);
+    return match ? match[1] : null;
+}
 
+function extrairData(texto) {
+    const match = texto.match(/(para|pras|pro|na|dia|hoje) (.+)/i);
+    return match ? match[2] : 'hoje às 18h';
+}
+
+// Funil de mensagens
 client.on('message', async msg => {
+    try {
+        // Menu principal
+        if (msg.body.match(/(menu|Menu|BOM DIA|BOA TARDE|BOA NOITE|dia|Bom Dia|bom dia|Boa Tarde|boa tarde|tarde|Boa Noite|boa noite|noite|oi|Oi|Olá|olá|ola|Ola)/i) && msg.from.endsWith('@c.us')) {
+            const chat = await msg.getChat();
+            const contact = await msg.getContact();
+            const name = contact.pushname;
 
-    if (msg.body.match(/(menu|Menu|dia|tarde|noite|oi|Oi|Olá|olá|ola|Ola)/i) && msg.from.endsWith('@c.us')) {
+            await delay(1000);
+            await chat.sendStateTyping();
 
-        const chat = await msg.getChat();
+            await client.sendMessage(msg.from, 
+                `Olá ${name.split(" ")[0]}! 🍰 Eu sou o *Jarvis*, assistente da *Bolos do José*!\n\n` +
+                '*Como posso ajudar? Digite o número da opção desejada:*\n\n' +
+                '1️⃣ 🍰 Cardápio Completo\n' +
+                '2️⃣ ⭐ Mais Vendidos\n' +
+                '3️⃣ 🎁 Promoções\n' +
+                '4️⃣ ⏰ Horário de Funcionamento\n' +
+                '5️⃣ 📝 Fazer Pedido\n' +
+                '6️⃣ 📞 Falar com José'
+            );
+        }
 
-        await delay(3000); //delay de 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000); //Delay de 3000 milisegundos mais conhecido como 3 segundos
-        const contact = await msg.getContact(); //Pegando o contato
-        const name = contact.pushname; //Pegando o nome do contato
-        await client.sendMessage(msg.from,'Olá! '+ name.split(" ")[0] + 'Sou o Jarvis assistente virtual de José Gomes. Como posso ajudá-lo hoje? Por favor, digite uma das opções abaixo:\n\n1 - Sabores da Semana\n2 - Os mais Vendidos\n3 - Sabor Especial\n4 - Contato\n5 - Falar Com José'); //Primeira mensagem de texto
-        await delay(3000); //delay de 3 segundos
-        
-        
-    
-        
+        // Opção 1 - Cardápio Completo
+        if (msg.body === '1' && msg.from.endsWith('@c.us')) {
+            const chat = await msg.getChat();
+            
+            await delay(1000);
+            await chat.sendStateTyping();
+            
+            await client.sendMessage(msg.from, 
+                '*🍰 CARDÁPIO COMPLETO 🍰*\n\n' +
+                '1. Bolo de Chocolate c/ Doce de Leite - R$ 45,00\n' +
+                '2. Bolo de Chocolate Caramelizado - R$ 48,00\n' +
+                '3. Bolo Trufado - R$ 55,00\n' +
+                '4. Bolo de Morango - R$ 50,00\n' +
+                '5. Bolo de Prestígio - R$ 52,00\n' +
+                '6. Bolo de Leite Ninho - R$ 58,00\n\n' +
+                'Para pedir, digite:\n' +
+                '"Quero [nome do bolo] para [data/horário]"\n' +
+                'Exemplo: _Quero Bolo de Morango para amanhã às 15h_'
+            );
+        }
+
+        // Opção 2 - Mais Vendidos
+        if (msg.body === '2' && msg.from.endsWith('@c.us')) {
+            const chat = await msg.getChat();
+
+            await delay(1000);
+            await chat.sendStateTyping();
+
+            await client.sendMessage(msg.from, 
+                '*⭐ BOLOS MAIS VENDIDOS ⭐*\n\n' +
+                '1. Bolo de Morango - R$ 50,00\n' +
+                '2. Bolo de Prestígio - R$ 52,00\n' +
+                '3. Bolo de Leite Ninho - R$ 58,00\n\n' +
+                'Para pedir, digite:\n' +
+                '"Quero [nome do bolo] para [data/horário]"\n' +
+                'Exemplo: _Quero Bolo de Morango para hoje às 17h_'
+            );
+        }
+
+        // Opção 4 - Horário de Funcionamento
+        if (msg.body === '4' && msg.from.endsWith('@c.us')) {
+            await client.sendMessage(msg.from,
+                '⏰*HORÁRIO DE FUNCIONAMENTO*⏰\n\n' +
+                'Segunda a Sexta: 8h às 19h\n' +
+                'Sábados: 8h às 15h\n' +
+                'Domingos: Fechado\n\n' +
+                'Entregas até 1h antes do fechamento!'
+            );
+        }
+
+        // Opção 5 - Fazer Pedido
+        if (msg.body === '5' && msg.from.endsWith('@c.us')) {
+            await client.sendMessage(msg.from,
+                '📝*FAZER PEDIDO*📝\n\n' +
+                'Digite no formato:\n' +
+                '"Quero [nome do bolo] para [data/horário]"\n\n' +
+                'Exemplos:\n' +
+                '_Quero Bolo de Morango para amanhã às 15h_\n' +
+                '_Quero Bolo Trufado para sexta às 18h_'
+            );
+        }
+
+        // Opção 6 - Falar com José
+        if (msg.body === '6' && msg.from.endsWith('@c.us')) {
+            await client.sendMessage(msg.from,
+                '📞*FALAR COM JOSÉ*📞\n\n' +
+                'Você será direcionado para falar diretamente com nosso confeiteiro!\n' +
+                'Envie sua mensagem que José responderá em breve.\n\n' +
+                'Obrigado por escolher os *Bolos do José*! 🍰'
+            );
+        }
+
+        // Processamento de pedidos (para qualquer mensagem com "quero")
+        if (msg.body.toLowerCase().includes('quero') && msg.from.endsWith('@c.us')) {
+            const chat = await msg.getChat();
+            const bolo = extrairNomeBolo(msg.body);
+            const data = extrairData(msg.body);
+
+            if (!bolo) {
+                await client.sendMessage(msg.from,
+                    'Não entendi qual bolo você quer. Por favor, digite:\n' +
+                    '"Quero [nome do bolo] para [data/horário]"\n' +
+                    'Exemplo: _Quero Bolo de Morango para amanhã às 15h_'
+                );
+                return;
+            }
+
+            pedidosPendentes[msg.from] = { bolo, data, status: 'pendente' };
+
+            await client.sendMessage(msg.from, 
+                '🔹*CONFIRMAR PEDIDO*🔹\n\n' +
+                `🍰 Bolo: ${bolo}\n` +
+                `⏰ Quando: ${data}\n\n` +
+                'Digite *CONFIRMAR* para finalizar ou *CANCELAR* para alterar'
+            );
+        }
+
+        // Confirmação de pedido
+        if (msg.body === 'CONFIRMAR|Confirmar|Confirma|SIM|sim|Sim' && pedidosPendentes[msg.from]) {
+            const pedidoTemp = pedidosPendentes[msg.from];
+            const contact = await msg.getContact();
+            const nomeCliente = contact.pushname || 'Não informado';
+            const numeroCliente = msg.from;
+
+            try {
+                // 1. Salva ou atualiza o cliente no banco de dados
+                const [cliente] = await Cliente.findOrCreate({
+                    where: { numero: numeroCliente },
+                    defaults: { nome: nomeCliente }
+                });
+
+                // 2. Cria o pedido associado ao cliente
+                const pedido = await Pedido.create({
+                    bolo: pedidoTemp.bolo,
+                    dataRetirada: pedidoTemp.data,
+                    status: 'recebido', // Status inicial
+                    mensagemOriginal: msg.body,
+                    ClienteId: cliente.id
+                });
+
+                // 3. Mensagem de confirmação para o cliente
+                await client.sendMessage(msg.from,
+                    `✅ *PEDIDO REGISTRADO!* ✅\n\n` +
+                    `📋 Número do Pedido: #${pedido.id}\n` +
+                    `🍰 Bolo: ${pedido.bolo}\n` +
+                    `⏰ Data de Retirada: ${pedido.dataRetirada}\n\n` +
+                    `Anotamos seu pedido! Você pode verificar o status a qualquer momento enviando "STATUS".`
+                );
+
+                // 4. Remove dos pedidos pendentes
+                delete pedidosPendentes[msg.from];
+
+            } catch (error) {
+                console.error('Erro ao salvar pedido:', error);
+                await client.sendMessage(msg.from,
+                    '❌ Houve um problema ao registrar seu pedido. Por favor, tente novamente.'
+                );
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro ao processar mensagem:', error);
+        await client.sendMessage(msg.from, 
+            'Ops! Ocorreu um erro. Por favor, tente novamente ou fale diretamente com José.'
+        );
     }
-
-
-
-
-    if (msg.body !== null && msg.body === '1' && msg.from.endsWith('@c.us')) {
-        const chat = await msg.getChat();
-
-
-        await delay(3000); //delay de 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000);
-        await client.sendMessage(msg.from, '🍰 Semana 21 - 25 de Abril:\n- Bolo de chocolate com cobertura de doce de leite\n- Bolo de chocolate caramelizado\n- Novo bolo trufado!');
-
-        await delay(3000); //delay de 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000);
-        await client.sendMessage(msg.from, 'Como funciona:\n1. Escolha seu bolo.\n2. Efetue o pagamento.\n3. Entrega combinada com local tudo via WhatsApp diretamente com José!');
-
-        await delay(3000); //delay de 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000);
-        await client.sendMessage(msg.from, 'Aceitamos \nPix\nCartão\n');
-
-
-    }
-
-    if (msg.body !== null && msg.body === '2' && msg.from.endsWith('@c.us')) {
-        const chat = await msg.getChat();
-
-
-        await delay(3000); //Delay de 3000 milisegundos mais conhecido como 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000);
-        await client.sendMessage(msg.from, '🍰 Mais vendidos:\n- Bolo de Morango com Chantilly\n- Bolo de Brigadeiro\n- Bolo Red Velvet');
-
-        await delay(3000); //delay de 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000);
-        await client.sendMessage(msg.from, 'Link para cadastro: https://site.com');
-    }
-
-    if (msg.body !== null && msg.body === '3' && msg.from.endsWith('@c.us')) {
-        const chat = await msg.getChat();
-
-
-        await delay(3000); //Delay de 3000 milisegundos mais conhecido como 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000);
-        await client.sendMessage(msg.from, 'Sorteio de em prêmios todo ano.\n\nAtendimento médico ilimitado 24h por dia.\n\nReceitas de medicamentos');
-        
-        await delay(3000); //delay de 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000);
-        await client.sendMessage(msg.from, 'Link para cadastro: https://site.com');
-
-    }
-
-    if (msg.body !== null && msg.body === '4' && msg.from.endsWith('@c.us')) {
-        const chat = await msg.getChat();
-
-        await delay(3000); //Delay de 3000 milisegundos mais conhecido como 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000);
-        await client.sendMessage(msg.from, 'Você pode aderir aos nossos planos diretamente pelo nosso site ou pelo WhatsApp.\n\nApós a adesão, você terá acesso imediato');
-
-
-        await delay(3000); //delay de 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000);
-        await client.sendMessage(msg.from, 'Link para cadastro: https://site.com');
-
-
-    }
-
-    if (msg.body !== null && msg.body === '5' && msg.from.endsWith('@c.us')) {
-        const chat = await msg.getChat();
-
-        await delay(3000); //Delay de 3000 milisegundos mais conhecido como 3 segundos
-        await chat.sendStateTyping(); // Simulando Digitação
-        await delay(3000);
-        await client.sendMessage(msg.from, 'Se você tiver outras dúvidas ou precisar de mais informações, por favor, fale aqui nesse whatsapp ou visite nosso site: https://site.com ');
-
-
-    }
-
-
-
-
-
-
-
-
 });
