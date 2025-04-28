@@ -2,11 +2,21 @@ require('dotenv').config();
 const express = require('express');
 const exphbs = require('express-handlebars');
 const path = require('path');
-const { Pedido, Cliente } = require('./models');
+const { Cliente, syncDatabase } = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+syncDatabase();
+
+app.get('/', (req, res) => {
+  res.send('Servidor funcionando!');
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Acesse: http://localhost:${PORT}`);
+});
 
 app.use('/css', express.static(path.join(__dirname, 'ChatBotWPP/css')));
 // Configuração do Handlebars 

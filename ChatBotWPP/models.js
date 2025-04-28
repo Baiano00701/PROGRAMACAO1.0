@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('./database');
 
-// Definição do modelo Cliente (ATUALIZADO)
+// Definição do modelo Cliente
 const Cliente = sequelize.define('Cliente', {
   nome: {
     type: DataTypes.STRING,
@@ -11,14 +11,14 @@ const Cliente = sequelize.define('Cliente', {
     type: DataTypes.STRING,
     allowNull: true
   },
-  numero: {  // NOVO CAMPO NECESSÁRIO
+  numero: {
     type: DataTypes.STRING,
     allowNull: true,
     unique: false
   }
 });
 
-// Definição do modelo Pedido (MANTIDO)
+// Definição do modelo Pedido
 const Pedido = sequelize.define('Pedido', {
   bolo: {
     type: DataTypes.STRING,
@@ -38,19 +38,40 @@ const Pedido = sequelize.define('Pedido', {
   }
 });
 
-// Relacionamentos (MANTIDO)
+// Relacionamentos
 Cliente.hasMany(Pedido);
 Pedido.belongsTo(Cliente);
 
-// Sincronizar o banco de dados (ATUALIZADO)
-(async () => {
+// Função para verificar se tabela Clientes_backup existe
+async function tabelaBackupExiste() {
+  const [results] = await sequelize.query(`
+    SELECT name FROM sqlite_master WHERE type='table' AND name='Clientes_backup';
+  `);
+  return results.length > 0;
+}
+
+// Função para sincronizar banco e criar backup apenas se necessário
+async function syncDatabase() {
   try {
     await sequelize.sync({ alter: true });
     console.log('✅ Modelos sincronizados com sucesso!');
-  } catch (error) {
-    console.error('❌ Erro na sincronização:', error);
-    process.exit(1); // Encerra o processo em caso de erro crítico
-  }
-})();
 
-module.exports = { Cliente, Pedido };
+    const existeBackup = await tabelaBackupExiste();
+    if (!existeBackup) {
+      console.log('ℹ️ Criando tabela de backup Clientes_backup...');
+      await sequelize.query(`
+        CREATE TABLE Clientes_backup AS
+        SELECT id, nome, createdAt, updatedAt, telefone, numero FROM Clientes;
+      `);
+      console.log('✅ Backup da tabela Clientes criado com sucesso!');
+    } else {
+      console.log('⚡ Backup já existe. Nenhuma ação necessária.');
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro na sincronização ou no backup:', error);
+    process.exit(1);
+  }
+}
+
+module.exports = { Cliente, Pedido, syncDatabase };
