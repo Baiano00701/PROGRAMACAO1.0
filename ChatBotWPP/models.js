@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('./database');
 
-// Definição do modelo Cliente
+// Definição do modelo Cliente (ATUALIZADO)
 const Cliente = sequelize.define('Cliente', {
   nome: {
     type: DataTypes.STRING,
@@ -10,10 +10,15 @@ const Cliente = sequelize.define('Cliente', {
   telefone: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  numero: {  // NOVO CAMPO NECESSÁRIO
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: false
   }
 });
 
-// Definição do modelo Pedido
+// Definição do modelo Pedido (MANTIDO)
 const Pedido = sequelize.define('Pedido', {
   bolo: {
     type: DataTypes.STRING,
@@ -33,19 +38,19 @@ const Pedido = sequelize.define('Pedido', {
   }
 });
 
-// Relacionamentos
+// Relacionamentos (MANTIDO)
 Cliente.hasMany(Pedido);
 Pedido.belongsTo(Cliente);
 
-// Sincronizar o banco de dados
+// Sincronizar o banco de dados (ATUALIZADO)
 (async () => {
   try {
     await sequelize.sync({ alter: true });
-    console.log('✅ Modelos sincronizados com o banco de dados');
+    console.log('✅ Modelos sincronizados com sucesso!');
   } catch (error) {
-    console.error('❌ Erro ao sincronizar modelos:', error);
+    console.error('❌ Erro na sincronização:', error);
+    process.exit(1); // Encerra o processo em caso de erro crítico
   }
 })();
 
-// Exportar os modelos
 module.exports = { Cliente, Pedido };

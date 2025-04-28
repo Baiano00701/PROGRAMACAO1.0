@@ -1,10 +1,9 @@
 const { Sequelize } = require('sequelize');
 
-// Conexão com o banco de dados SQLite
 const sequelize = new Sequelize({
   dialect: 'sqlite',
   storage: './database.sqlite',
-  logging: false
+  logging: console.log
 });
 
-module.exports = sequelize;
+module.exports = sequelize; 
