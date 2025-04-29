@@ -2,16 +2,14 @@ require('dotenv').config();
 const express = require('express');
 const exphbs = require('express-handlebars');
 const path = require('path');
-const { Cliente, syncDatabase } = require('./models');
+const { Cliente, Pedido, syncDatabase } = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 syncDatabase();
 
-app.get('/', (req, res) => {
-  res.send('Servidor funcionando!');
-});
+
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

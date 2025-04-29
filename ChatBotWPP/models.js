@@ -56,20 +56,8 @@ async function syncDatabase() {
     await sequelize.sync({ alter: true });
     console.log('✅ Modelos sincronizados com sucesso!');
 
-    const existeBackup = await tabelaBackupExiste();
-    if (!existeBackup) {
-      console.log('ℹ️ Criando tabela de backup Clientes_backup...');
-      await sequelize.query(`
-        CREATE TABLE Clientes_backup AS
-        SELECT id, nome, createdAt, updatedAt, telefone, numero FROM Clientes;
-      `);
-      console.log('✅ Backup da tabela Clientes criado com sucesso!');
-    } else {
-      console.log('⚡ Backup já existe. Nenhuma ação necessária.');
-    }
-    
   } catch (error) {
-    console.error('❌ Erro na sincronização ou no backup:', error);
+    console.error('❌ Erro na sincronização:', error);
     process.exit(1);
   }
 }
