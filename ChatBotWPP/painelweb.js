@@ -110,7 +110,7 @@ app.post('/pedidos/:id/status', async (req, res) => {
 
     pedido.status = req.body.status;
     await pedido.save();
-    res.redirect('/');
+    res.redirect('/?toast=1');
 
   } catch (error) {
     console.error('Erro ao atualizar status:', error);

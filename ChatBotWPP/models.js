@@ -18,8 +18,14 @@ const Cliente = sequelize.define('Cliente', {
   }
 });
 
-// Definição do modelo Pedido
+
+
 const Pedido = sequelize.define('Pedido', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
+  },
   bolo: {
     type: DataTypes.STRING,
     allowNull: false
@@ -37,6 +43,7 @@ const Pedido = sequelize.define('Pedido', {
     allowNull: true
   }
 });
+
 
 // Relacionamentos
 Cliente.hasMany(Pedido);

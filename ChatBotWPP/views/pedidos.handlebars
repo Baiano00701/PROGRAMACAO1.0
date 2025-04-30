@@ -3,12 +3,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{title}}</title>
+    <link rel="stylesheet" href="/css/style.css?v=1.0">
+
+
 </head>
+<div id="toast" class="toast">Status atualizado com sucesso ✅</div>
+<script>
+  // Exibe o toast se encontrar "toast=1" na URL
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('toast') === '1') {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000); // 3 segundos
+
+    // Remove o parâmetro da URL sem recarregar
+    const url = new URL(window.location);
+    url.searchParams.delete('toast');
+    window.history.replaceState({}, document.title, url.toString());
+  }
+</script>
+
 <body>
 <div class="container">
     <h1>🍰 Pedidos - Bolos do José</h1>
     
-    <!-- Menu de Filtros (MANTIDO) -->
+    <!-- Menu de Filtros -->
     <div class="filtros">
         <a href="/?status=todos" class="btn-filtro {{#if (eq statusFilter 'todos')}}ativo{{/if}}">Todos</a>
         <a href="/?status=recebido" class="btn-filtro {{#if (eq statusFilter 'recebido')}}ativo{{/if}}">Recebidos</a>
@@ -17,9 +38,10 @@
         <a href="/?status=entregue" class="btn-filtro {{#if (eq statusFilter 'entregue')}}ativo{{/if}}">Entregues</a>
         <a href="/?status=cancelado" class="btn-filtro {{#if (eq statusFilter 'cancelado')}}ativo{{/if}}">Cancelados</a>
     </div>
-
-    <!-- Lista de Pedidos (CORRIGIDA) -->
+    
+    <!-- Lista de Pedidos -->
     {{#each pedidos}}
+    <form action="/pedidos/{{this.id}}/status" method="POST"></form>
         <div class="pedido {{status}}">
             <h3>Pedido #{{id}}{{#if bolo}} - {{bolo}}{{/if}}</h3>
             
@@ -46,9 +68,9 @@
                 {{formatDate createdAt}}
             </div>
             
-            <!-- Formulário de Status (MANTIDO) -->
+            <!-- Formulário de Status -->
             <div class="status-form">
-                <form action="/pedidos/{{id}}/status" method="POST">
+                <form action="/pedidos/{{this.id}}/status" method="POST">
                     <div class="info">
                         <span class="info-label">🔄 Status:</span>
                         <select name="status" class="status-select">
